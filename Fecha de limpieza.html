@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Horario de Limpieza (Local)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .gradient-header {
+            background: linear-gradient(to right, #ef4444, #f97316);
+        }
+        .btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        select:disabled {
+            background-color: #e5e7eb;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div id="app" class="container mx-auto p-4 md:p-8 max-w-3xl">
+
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-800 mb-2">Generador de Horarios</h1>
+            <p class="text-lg text-gray-600">Crea tu infografía de limpieza seleccionando los grupos.</p>
+        </header>
+
+        <!-- Form to Add Schedule -->
+        <section id="form-section" class="bg-white p-6 rounded-xl shadow-md mb-8">
+            <h2 class="text-2xl font-bold mb-4">Añadir Nueva Fecha</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="cleaning-date" class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                    <input type="date" id="cleaning-date" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500">
+                </div>
+                <div>
+                    <label for="group1-select" class="block text-sm font-medium text-gray-700 mb-1">Grupo 1 (Célula)</label>
+                    <select id="group1-select" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"></select>
+                </div>
+                <div>
+                    <label for="group2-select" class="block text-sm font-medium text-gray-700 mb-1">Grupo 2 (Célula)</label>
+                    <select id="group2-select" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"></select>
+                </div>
+            </div>
+            <button id="add-schedule-btn" class="btn mt-4 w-full md:w-auto bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">
+                Añadir Fecha
+            </button>
+        </section>
+
+        <!-- Schedule List -->
+        <section>
+            <h2 class="text-2xl font-bold mb-4">Fechas Programadas</h2>
+            <div id="schedule-list" class="space-y-3">
+                <p class="text-gray-500 text-center py-4">Aún no hay fechas programadas.</p>
+            </div>
+        </section>
+
+        <!-- Generate & View Button -->
+        <section class="mt-10 text-center">
+            <button id="generate-html-btn" class="btn gradient-header text-white font-bold py-3 px-8 rounded-lg text-lg shadow-lg hover:shadow-xl">
+                ✨ Ver Infografía Final
+            </button>
+        </section>
+    </div>
+    
+    <!-- App Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Hardcoded list of Cell Groups ---
+            const ALL_CELL_GROUPS = [
+                "Arrebatados", "Soldados de Cristo", "Ríos de Agua viva", "Casa de Paz",
+                "Conectados", "Avivados", "Camino de Fe", "Seguidores de Cristo",
+                "Sal y luz", "Segadores", "Generación sacerdotal", "Unidos por Cristo",
+                "Jóvenes", "Más que vencedores", "Herederos del Reino", "Dios es Real"
+            ].sort(); // Sort them alphabetically
+
+            let schedules = [];
+
+            // --- UI Elements ---
+            const dateInput = document.getElementById('cleaning-date');
+            const group1Select = document.getElementById('group1-select');
+            const group2Select = document.getElementById('group2-select');
+            const addScheduleBtn = document.getElementById('add-schedule-btn');
+            const scheduleList = document.getElementById('schedule-list');
+            const generateHtmlBtn = document.getElementById('generate-html-btn');
+
+            // --- Data Functions (using localStorage) ---
+            function loadSchedules() {
+                const savedSchedules = localStorage.getItem('cleaningSchedules');
+                schedules = savedSchedules ? JSON.parse(savedSchedules) : [];
+                schedules.sort((a, b) => new Date(a.date) - new Date(b.date));
+                renderSchedules();
+            }
+
+            function saveSchedules() {
+                schedules.sort((a, b) => new Date(a.date) - new Date(b.date));
+                localStorage.setItem('cleaningSchedules', JSON.stringify(schedules));
+                renderSchedules();
+            }
+
+            // --- UI Rendering ---
+            function renderSchedules() {
+                if (schedules.length === 0) {
+                    scheduleList.innerHTML = `<p class="text-gray-500 text-center py-4">Aún no hay fechas programadas.</p>`;
+                    return;
+                }
+                scheduleList.innerHTML = schedules.map(schedule => `
+                    <div class="bg-white p-4 rounded-lg shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="font-bold text-lg text-red-700">${formatDate(schedule.date)}</p>
+                            <p class="text-sm text-gray-600">${schedule.group1} & ${schedule.group2}</p>
+                        </div>
+                        <button data-id="${schedule.id}" class="delete-schedule-btn text-gray-400 hover:text-red-600 font-bold text-xl p-2">&times;</button>
+                    </div>
+                `).join('');
+            }
+
+            function populateDropdown(selectElement, options, valueToExclude = null) {
+                const currentValue = selectElement.value;
+                selectElement.innerHTML = '<option value="">Seleccionar...</option>';
+                options.forEach(groupName => {
+                    if (groupName !== valueToExclude) {
+                        const option = document.createElement('option');
+                        option.value = groupName;
+                        option.textContent = groupName;
+                        selectElement.appendChild(option);
+                    }
+                });
+                selectElement.value = currentValue;
+                selectElement.disabled = options.length === 0;
+            }
+
+            function populateAllDropdowns() {
+                populateDropdown(group1Select, ALL_CELL_GROUPS, group2Select.value);
+                populateDropdown(group2Select, ALL_CELL_GROUPS, group1Select.value);
+            }
+
+            // --- Event Handlers ---
+            addScheduleBtn.addEventListener('click', () => {
+                const date = dateInput.value;
+                const group1 = group1Select.value;
+                const group2 = group2Select.value;
+
+                if (!date || !group1 || !group2) {
+                    alert("Por favor, completa todos los campos: fecha y ambos grupos.");
+                    return;
+                }
+                if (group1 === group2) {
+                    alert("Por favor, selecciona dos grupos diferentes.");
+                    return;
+                }
+
+                schedules.push({ id: Date.now(), date, group1, group2 });
+                saveSchedules();
+                
+                dateInput.value = '';
+                group1Select.value = '';
+                group2Select.value = '';
+                populateAllDropdowns();
+            });
+
+            scheduleList.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-schedule-btn')) {
+                    const idToDelete = parseInt(e.target.dataset.id);
+                    if (confirm('¿Estás seguro de que quieres eliminar esta fecha?')) {
+                        schedules = schedules.filter(schedule => schedule.id !== idToDelete);
+                        saveSchedules();
+                    }
+                }
+            });
+            
+            group1Select.addEventListener('change', () => populateDropdown(group2Select, ALL_CELL_GROUPS, group1Select.value));
+            group2Select.addEventListener('change', () => populateDropdown(group1Select, ALL_CELL_GROUPS, group2Select.value));
+
+            generateHtmlBtn.addEventListener('click', () => {
+                if (schedules.length === 0) {
+                    alert("Añade al menos una fecha antes de generar la infografía.");
+                    return;
+                }
+                const finalHTML = generateFinalHTML();
+                const newWindow = window.open();
+                newWindow.document.open();
+                newWindow.document.write(finalHTML);
+                newWindow.document.close();
+            });
+
+            // --- Helper Functions ---
+            function formatDate(dateString) {
+                const date = new Date(dateString + 'T00:00:00');
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = String(date.getFullYear()).slice(-2);
+                return `Sábado ${day}.${month}.${year}`;
+            }
+
+            function generateFinalHTML() {
+                const scheduleHTML = schedules.map(schedule => `
+                    <!-- ${formatDate(schedule.date)} -->
+                    <div class="schedule-date card flex flex-col justify-between">
+                        <h3 class="text-xl font-bold text-red-700 mb-2">${formatDate(schedule.date)}</h3>
+                        <ul class="text-gray-800 font-medium space-y-1">
+                            <li><span class="text-green-600 mr-2">✔️</span> ${schedule.group1}</li>
+                            <li><span class="text-green-600 mr-2">✔️</span> ${schedule.group2}</li>
+                        </ul>
+                    </div>`).join('\n                ');
+
+                return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Programa de Limpieza 🏩❤️</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"><style>:root{--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000}*,::before,::after{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:'Inter',sans-serif}body{margin:0;line-height:inherit;font-family:'Inter',sans-serif;background-color:#f0f2f5;color:#333;line-height:1.6}.container{width:100%;max-width:900px;margin-left:auto;margin-right:auto;padding-left:1rem;padding-right:1rem}.card{background-color:#fff;border-radius:1rem;box-shadow:0 4px 12px rgba(0,0,0,.08);padding:1.5rem}.gradient-bg{background:linear-gradient(to right,#ef4444,#f97316)}.icon{display:inline-flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;border-radius:9999px;background-color:#fef3c7;color:#d97706;font-weight:700;flex-shrink:0}.task-item{display:flex;align-items:flex-start;gap:.75rem}.schedule-date{background-color:#fef2f2;border-left:5px solid #ef4444;padding:1.25rem}.p-4{padding:1rem}.sm\\:p-6{padding:1.5rem}.lg\\:p-8{padding:2rem}.py-8{padding-top:2rem;padding-bottom:2rem}.mb-10{margin-bottom:2.5rem}.mb-4{margin-bottom:1rem}.mb-3{margin-bottom:.75rem}.mb-6{margin-bottom:1.5rem}.mt-3{margin-top:.75rem}.ml-1{margin-left:.25rem}.mr-2{margin-right:.5rem}.px-4{padding-left:1rem;padding-right:1rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.text-center{text-align:center}.text-5xl{font-size:3rem;line-height:1}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.font-extrabold{font-weight:800}.font-medium{font-weight:500}.font-semibold{font-weight:600}.font-bold{font-weight:700}.text-gray-800{color:#1f2937}.text-gray-700{color:#374151}.text-gray-600{color:#4b5563}.text-red-500{color:#ef4444}.text-red-600{color:#dc2626}.text-red-700{color:#b91c1c}.text-white{color:#fff}.text-blue-500{color:#3b82f6}.text-blue-700{color:#1d4ed8}.text-green-600{color:#16a34a}.leading-tight{line-height:1.25}.rounded-full{border-radius:9999px}.shadow-lg{--tw-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1);box-shadow:var(--tw-shadow,0 0 #0000),var(--tw-shadow-colored,0 0 #0000)}.inline-block{display:inline-block}.transform{transform:translate(var(--tw-translate-x,0),var(--tw-translate-y,0)) rotate(var(--tw-rotate,0)) skewX(var(--tw-skew-x,0)) skewY(var(--tw-skew-y,0)) scaleX(var(--tw-scale-x,1)) scaleY(var(--tw-scale-y,1))}.-rotate-2{--tw-rotate:-2deg;transform:translate(var(--tw-translate-x,0),var(--tw-translate-y,0)) rotate(var(--tw-rotate,0)) skewX(var(--tw-skew-x,0)) skewY(var(--tw-skew-y,0)) scaleX(var(--tw-scale-x,1)) scaleY(var(--tw-scale-y,1))}.italic{font-style:italic}.border-l-4{border-left-width:4px}.border-blue-500{border-color:#3b82f6}.flex{display:flex}.items-center{align-items:center}.space-y-4>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem * var(--tw-space-y-reverse))}.space-y-1>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.25rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.25rem * var(--tw-space-y-reverse))}.grid{display:grid}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.gap-6{gap:1.5rem}.flex-col{flex-direction:column}.justify-between{justify-content:space-between}@media (min-width:768px){.md\\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}}</style></head><body class="p-4 sm:p-6 lg:p-8"><div class="container mx-auto py-8"><header class="text-center mb-10"><h1 class="text-5xl font-extrabold text-gray-800 mb-4 leading-tight"><span class="gradient-bg text-white px-4 py-2 rounded-full shadow-lg inline-block transform -rotate-2">LIMPIEZA</span><span class="text-red-500"> 🏩❤️</span></h1><p class="text-xl font-medium text-gray-700 mb-4">Hermanos Bendiciones 🙏🏻🙌🏻</p><p class="text-lg text-gray-600">Siguiendo con la escala de limpieza volvemos por nuestra próxima ronda!!! 👇🏻👇🏻👇🏻</p></header><section class="card mb-10 border-l-4 border-blue-500"><h2 class="text-2xl font-semibold text-blue-700 mb-3 flex items-center"><span class="mr-2 text-3xl">📝</span> Nota Importante</h2><p class="text-gray-700 italic">Amados por favor pedimos que sean sabios con el uso de los productos de limpieza, 🙏🏻si usamos los trapeadores y los pañitos, debemos dejar todo limpio y ordenado en el armario!!! Sirvamos con Amor❤️🙌🏻</p><p class="text-gray-800 font-bold mt-3 flex items-center"><span class="mr-2 text-green-600">✅</span> Recuerde por favor que la limpieza se realizará los <span class="text-red-600 ml-1">sábados en la noche</span>.</p></section><section class="card mb-10"><h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">✨ Tareas de Limpieza ✨</h2><ul class="space-y-4"><li class="task-item"><span class="icon">1</span><p class="text-gray-700">Todo el salón de abajo.</p></li><li class="task-item"><span class="icon">2</span><p class="text-gray-700">Los paneles negros de las paredes con un paño.</p></li><li class="task-item"><span class="icon">3</span><p class="text-gray-700">Afuera, todo el frente.</p></li><li class="task-item"><span class="icon">4</span><p class="text-gray-700">El salón de los bebés (completo, baño y estantes).</p></li><li class="task-item"><span class="icon">5</span><p class="text-gray-700">Los 2 salones del 3er piso, completos (estantes, adentro y afuera, mesas). 🙏🏻</p></li><li class="task-item"><span class="icon">6</span><p class="text-gray-700">El Altar y el púlpito (quitar todo el polvo).</p></li><li class="task-item"><span class="icon">7</span><p class="text-gray-700">Las sillas del fondo (Marrones) dejar una distancia de la pared.</p></li><li class="task-item"><span class="icon">8</span><p class="text-gray-700">La cocina y todos sus implementos (quitar la grasa).</p></li></ul></section><section class="card"><h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">🗓️ Fechas de Limpieza 🗓️</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-6">${scheduleHTML}</div></section></div></body></html>`;
+            }
+            
+            // --- Initial Load ---
+            loadSchedules();
+            populateAllDropdowns();
+        });
+    </script>
+</body>
+</html>
