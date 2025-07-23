@@ -192,10 +192,16 @@
                     return;
                 }
                 const finalHTML = generateFinalHTML();
-                const newWindow = window.open();
-                newWindow.document.open();
-                newWindow.document.write(finalHTML);
-                newWindow.document.close();
+                // --- INICIO DEL CÓDIGO MODIFICADO (Opción 1: Blob URL) ---
+                const blob = new Blob([finalHTML], { type: 'text/html' });
+                const blobUrl = URL.createObjectURL(blob);
+                window.open(blobUrl, '_blank');
+                            
+    // --- FIN DEL CÓDIGO MODIFICADO ---    
+            //    const newWindow = window.open();
+            //   newWindow.document.open();
+            //    newWindow.document.write(finalHTML);
+            //    newWindow.document.close();
             });
 
             // --- Helper Functions ---
